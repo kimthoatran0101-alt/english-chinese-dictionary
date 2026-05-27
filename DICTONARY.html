@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>專業漢英詞典 - Professional Chinese-English Dictionary</title>
+    <style>
+        :root { --primary: #1d2a44; --accent: #d12127; --bg: #f4f7f9; --english-blue: #007bff; }
+        body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); }
+        .header { background: var(--primary); color: white; padding: 25px; text-align: center; border-radius: 12px; margin-bottom: 30px; }
+        
+        .search-container { position: relative; margin-bottom: 30px; }
+        .search-box { width: 100%; padding: 15px 25px; border: 2px solid var(--primary); border-radius: 30px; font-size: 18px; outline: none; box-sizing: border-box; }
+        .suggestion-box { position: absolute; background: white; width: 100%; z-index: 10; border-radius: 0 0 15px 15px; box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
+        .suggestion-item { padding: 12px 25px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .suggestion-item:hover { background: #f0f7ff; color: var(--accent); }
+
+        .word-card { border: 1px solid #e0e0e0; border-radius: 12px; padding: 30px; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .header-flex { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .word-title { font-size: 56px; color: var(--primary); margin: 0; font-weight: bold; }
+        .phonetic-group { text-align: right; }
+        .pinyin { font-size: 22px; color: var(--accent); font-weight: bold; }
+        .zhuyin { font-size: 18px; color: #555; background: #fff1f1; padding: 2px 8px; border-radius: 4px; margin-top: 5px; display: inline-block; }
+        .ipa-tag { display: inline-block; background: #eee; padding: 4px 10px; border-radius: 6px; font-size: 14px; margin-top: 5px; font-family: monospace; }
+
+        .extra-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .info-card { background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 10px; }
+        .info-card h4 { margin-top: 0; color: var(--primary); border-bottom: 2px solid var(--primary); display: inline-block; }
+        .writing-img { width: 100%; border: 1px solid #eee; border-radius: 5px; }
+
+        .pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 25px 0; }
+        .pos-item { padding: 15px; border-radius: 10px; border-left: 5px solid var(--primary); }
+        .v { background: #e3f2fd; } .n { background: #e8f5e9; } .adj { background: #fff3e0; } .adv { background: #f3e5f5; }
+        .pos-label { font-weight: bold; font-size: 13px; color: #666; display: block; margin-bottom: 5px; }
+
+        .nuance-box { background: #fff4f4; border: 1px solid #ffdada; padding: 20px; border-radius: 10px; margin: 25px 0; }
+        .nuance-title { color: var(--accent); font-weight: bold; font-size: 18px; border-bottom: 1px solid #ffdada; margin-bottom: 10px; display: block; }
+
+        .image-box { text-align: center; margin: 20px 0; }
+        .word-img { width: 100%; max-width: 450px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin: 20px 0; border-radius: 12px; }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+
+        .audio-group { margin: 15px 0; }
+        .audio-btn { background: #fff; border: 1px solid #ddd; padding: 8px 15px; border-radius: 20px; cursor: pointer; margin-right: 10px; font-size: 14px; }
+        .audio-btn:hover { background: var(--primary); color: white; }
+
+        .quiz-section { background: #2c3e50; color: white; padding: 30px; border-radius: 15px; margin-top: 40px; }
+        .quiz-question { margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; }
+        .quiz-option { display: block; width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 6px; cursor: pointer; text-align: left; font-size: 15px; }
+        .quiz-option:hover { background: #dcdde1; }
+        .score-board { font-size: 22px; color: #2ecc71; text-align: center; margin-top: 20px; border-top: 1px solid #444; padding-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>漢英專業學術詞典</h1>
+        <p>Chinese-English Professional Dictionary (IPA & Zhuyin Enhanced)</p>
+    </div>
+
+    <div class="search-container">
+        <input type="text" class="search-box" id="search" placeholder="Enter Chinese word: 學習, 發展, 打算..." oninput="handleSuggest()">
+        <div id="suggest" class="suggestion-box"></div>
+    </div>
+
+    <div id="result">
+        <div style="text-align: center; color: #999; padding: 60px;">
+            <h2>Welcome! Enter a word in the search box to begin.</h2>
+        </div>
+    </div>
+</div>
+
+<script>
+let totalScore = 0;
+
+const dictionary = {
+    "學習": {
+        pinyin: "xué xí",
+        zhuyin: "ㄒㄩㄝˊ ㄒㄧˊ",
+        ipa: "[ɕɥɛ˧˥ ɕi˧˥]",
+        englishIpa: "/ˈstʌdi/ & /ˈlɜːrn/",
+        image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600",
+        writingUrl: "https://files.hantrainerpro.com/stroke-order/chinese/xue-stroke-order.png", 
+        wordFamily: ["Student (學生)", "School (學校)", "Scholar (學者)", "Academic (學術)"],
+        videoUrl: "https://www.youtube.com/embed/SuMKdrdUsCw",
+        synonyms: "研習 (To study), 修習 (To take a course), 鑽研 (To delve into)",
+        antonyms: "荒廢 (To neglect), 怠惰 (Idle)",
+        idioms: ["學而時習之 (Learn and practice constantly)", "學無止境 (Knowledge has no limit)"],
+        pos: {
+            v: { en: "To study / To learn", ex: "我們應該不斷學習新知識。(We should constantly learn new knowledge.)" },
+            n: { en: "Study / Learning", ex: "他在學習上遇到了困難。(He encountered difficulties in his studies.)" },
+            adj: { en: "Academic / Learning-related", ex: "營造良好的學習氛圍。(Create a good learning atmosphere.)" },
+            adv: { en: "Academically", ex: "在學習方面，他表現優異。(Academically, he performs excellently.)" }
+        },
+        nuance: "<b>Study vs. Learn:</b><br>1. <b>Study</b> focuses on the process: reading, researching, or attending class.<br>2. <b>Learn</b> focuses on the outcome: mastering a skill or acquiring knowledge.",
+        quiz: [
+            { q: "Which IPA tone number represents the 2nd tone in '學習'?", a: ["55", "35", "214"], c: 1 },
+            { q: "What is the Zhuyin for the first character '學'?", a: ["ㄒㄧˊ", "ㄒㄩㄝˊ", "ㄈㄚ"], c: 1 },
+            { q: "Which idiom means 'Knowledge has no limit'?", a: ["學而時習之", "學無止境", "蒸蒸日上"], c: 1 }
+        ]
+    },
+    "發展": {
+        pinyin: "fā zhǎn",
+        zhuyin: "ㄈㄚ ㄓㄢˇ",
+        ipa: "[fa˥ ʈʂan˨˩˦]",
+        englishIpa: "/dɪˈveləp/ & /ɡrəʊθ/",
+        image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600",
+        writingUrl: "https://files.hantrainerpro.com/stroke-order/chinese/fa-stroke-order.png",
+        wordFamily: ["Development (發展)", "Developer (開發者)", "Developing (發展中的)", "Developed (發達的)"],
+        videoUrl: "https://www.youtube.com/embed/ugqig8yDfbc",
+        synonyms: "擴展 (Expand), 成長 (Grow), 演進 (Evolve)",
+        antonyms: "萎縮 (Shrink), 停滯 (Stagnate), 倒退 (Regress)",
+        idioms: ["蒸蒸日上 (Prospering every day)", "日新月異 (Changing with each passing day)"],
+        pos: {
+            v: { en: "To develop / To expand", ex: "科技正在快速發展。(Technology is developing rapidly.)" },
+            n: { en: "Development / Growth", ex: "可持續發展是全球目標。(Sustainable development is a global goal.)" },
+            adj: { en: "Developing / Evolutionary", ex: "這是一個發展中的過程。(This is an evolutionary process.)" },
+            adv: { en: "Progressively", ex: "事業發展得十分順利。(The business developed progressively.)" }
+        },
+        nuance: "<b>Develop vs. Grow:</b><br>1. <b>Develop</b> implies evolution from simple to complex (economy, skills).<br>2. <b>Grow</b> usually refers to natural increases in size or quantity (height, population).",
+        quiz: [
+            { q: "The tone number '214' in IPA refers to which character?", a: ["發", "展", "學"], c: 1 },
+            { q: "What is the synonym for '發展' that means 'to evolve'?", a: ["演進", "萎縮", "停滯"], c: 0 },
+            { q: "Which word is the antonym of '發展'?", a: ["擴展", "成長", "倒退"], c: 2 }
+        ]
+    },
+    "打算": {
+        pinyin: "dǎ suàn",
+        zhuyin: "ㄉㄚˇ ㄙㄨㄢˋ",
+        ipa: "[ta˨˩˦ swan˥˩]",
+        englishIpa: "/ˈplæn/ & /ɪnˈtend/",
+        image: "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=600",
+        writingUrl: "https://files.hantrainerpro.com/stroke-order/chinese/da-stroke-order.png",
+        wordFamily: ["Plan (計劃)", "Intent (意圖)", "Calculation (計算)", "Intentionally (故意地)"],
+        videoUrl: "https://www.youtube.com/embed/UnSJWs6bkM8",
+        synonyms: "計劃 (Plan), 企圖 (Attempt), 預計 (Estimate)",
+        antonyms: "放棄 (Give up), 隨機 (Random)",
+        idioms: ["心中有數 (To have a clear plan in mind)", "深謀遠慮 (To think deeply and plan ahead)"],
+        pos: {
+            v: { en: "To plan / To intend", ex: "你明年打算去哪裡？(Where do you plan to go next year?)" },
+            n: { en: "Plan / Intention", ex: "我有個長遠的打算。(I have a long-term plan.)" },
+            adj: { en: "Planned / Calculated", ex: "這不是偶然，是打算好的。(This is not an accident, it was planned.)" },
+            adv: { en: "Intentionally / Deliberately", ex: "他打細算地過日子。(He lives his life very calculatedly.)" }
+        },
+        nuance: "<b>Plan vs. Intend:</b><br>1. <b>Plan</b> implies specific steps or a schedule already in place.<br>2. <b>Intend</b> focuses on the subjective desire or goal, often without specific details yet.",
+        quiz: [
+            { q: "The IPA for '算' is [swan˥˩]. What does '51' represent?", a: ["1st tone", "3rd tone", "4th tone"], c: 2 },
+            { q: "Which idiom means 'to have a clear plan in mind'?", a: ["心中有數", "蒸蒸日上", "學而時習之"], c: 0 },
+            { q: "What is the antonym of '打算'?", a: ["計劃", "隨機", "企圖"], c: 1 }
+        ]
+    }
+};
+
+function speak(text, lang) {
+    const msg = new SpeechSynthesisUtterance();
+    msg.text = text;
+    msg.lang = lang;
+    window.speechSynthesis.speak(msg);
+}
+
+function handleSuggest() {
+    let input = document.getElementById("search").value.trim();
+    let suggestBox = document.getElementById("suggest");
+    suggestBox.innerHTML = "";
+    if (!input) return;
+    Object.keys(dictionary).forEach(key => {
+        if (key.includes(input)) {
+            let div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.innerText = key;
+            div.onclick = () => showResult(key);
+            suggestBox.appendChild(div);
+        }
+    });
+}
+
+function showResult(word) {
+    document.getElementById("search").value = word;
+    document.getElementById("suggest").innerHTML = "";
+    const data = dictionary[word];
+    
+    let html = `
+        <div class="word-card">
+            <div class="header-flex">
+                <div>
+                    <h1 class="word-title">${word}</h1>
+                    <div class="audio-group">
+                        <button class="audio-btn" onclick="speak('${word}', 'zh-TW')">🔊 Chinese (TW)</button>
+                    </div>
+                </div>
+                <div class="phonetic-group">
+                    <span class="pinyin">Pinyin: ${data.pinyin}</span><br>
+                    <span class="zhuyin">Zhuyin: ${data.zhuyin}</span><br>
+                    <span class="ipa-tag">CN IPA: ${data.ipa}</span><br>
+                    <span class="ipa-tag" style="background:#e7f3ff">EN IPA: ${data.englishIpa}</span>
+                    <div style="margin-top:10px">
+                         <button class="audio-btn" style="border-color:var(--english-blue)" onclick="speak('${data.pos.v.en}', 'en-US')">🔊 English Voice</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="extra-info-grid">
+                <div class="info-card">
+                    <h4>🖋️ Stroke Order</h4>
+                    <p>Writing: 「${word[0]}」</p>
+                    <img src="${data.writingUrl}" class="writing-img" alt="stroke order">
+                </div>
+                <div class="info-card">
+                    <h4>🌳 Word Family</h4>
+                    <ul style="padding-left:20px; color:#555; line-height: 1.6;">
+                        ${data.wordFamily.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="image-box">
+                <img src="${data.image}" class="word-img">
+                <p style="color:#666; font-size:14px">Visual Context: ${word}</p>
+            </div>
+
+            <div class="pos-grid">
+                <div class="pos-item v"><span class="pos-label">Verb</span><b>${data.pos.v.en}</b><br><small>${data.pos.v.ex}</small></div>
+                <div class="pos-item n"><span class="pos-label">Noun</span><b>${data.pos.n.en}</b><br><small>${data.pos.n.ex}</small></div>
+                <div class="pos-item adj"><span class="pos-label">Adj</span><b>${data.pos.adj.en}</b><br><small>${data.pos.adj.ex}</small></div>
+                <div class="pos-item adv"><span class="pos-label">Adv</span><b>${data.pos.adv.en}</b><br><small>${data.pos.adv.ex}</small></div>
+            </div>
+
+            <div class="nuance-box" style="background: #eef2f7; border-color: #d1d9e6;">
+                <span class="nuance-title" style="color: var(--primary); border-color: #d1d9e6;">📺 Practical Application</span>
+                <div class="video-container">
+                    <iframe src="${data.videoUrl}" allowfullscreen></iframe>
+                </div>
+            </div>
+
+            <div class="nuance-box">
+                <span class="nuance-title">🔍 Nuance Analysis</span>
+                <p>${data.nuance}</p>
+            </div>
+
+            <p><b>Synonyms:</b> ${data.synonyms}</p>
+            <p><b>Antonyms:</b> ${data.antonyms}</p>
+            <p><b>Idioms:</b> <span style="color:var(--accent); font-weight:bold;">${data.idioms.join(' | ')}</span></p>
+
+            <div class="quiz-section">
+                <h3>✍️ Interaction Quiz</h3>
+                <div id="quiz-area"></div>
+                <div class="score-board">Total Score: <span id="score-val">${totalScore}</span></div>
+            </div>
+        </div>
+    `;
+    document.getElementById("result").innerHTML = html;
+    renderQuiz(word);
+}
+
+function renderQuiz(word) {
+    const area = document.getElementById("quiz-area");
+    const questions = dictionary[word].quiz;
+    area.innerHTML = "";
+    questions.forEach((q, idx) => {
+        let div = document.createElement("div");
+        div.className = "quiz-question";
+        div.innerHTML = `<p><b>Q${idx+1}: ${q.q}</b></p>`;
+        q.a.forEach((opt, oIdx) => {
+            let btn = document.createElement("button");
+            btn.className = "quiz-option";
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if (oIdx === q.c) {
+                    btn.style.backgroundColor = "#2ecc71";
+                    btn.style.color = "white";
+                    totalScore += 10;
+                    alert("Correct!");
+                } else {
+                    btn.style.backgroundColor = "#e74c3c";
+                    btn.style.color = "white";
+                    alert("Try again!");
+                }
+                document.getElementById("score-val").innerText = totalScore;
+            };
+            div.appendChild(btn);
+        });
+        area.appendChild(div);
+    });
+}
+</script>
+
+</body>
+</html>
