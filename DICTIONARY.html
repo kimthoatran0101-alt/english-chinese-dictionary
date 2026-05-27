@@ -269,18 +269,18 @@
 
 <div class="container">
     <div class="header">
-        <h1>漢英專業學術詞典 (Song ngữ Thông minh)</h1>
-        <p>Nhập Tiếng Trung / Tiếng Anh (study, learn, develop, plan) / Pinyin để tìm kiếm</p>
+        <h1>漢英專業學術詞典 (Song ngữ Hoàn chỉnh)</h1>
+        <p>Tìm kiếm đa năng: Nhập tiếng Anh (study, learn, develop, plan) hoặc Tiếng Trung / Pinyin</p>
     </div>
 
     <div class="search-container">
-        <input type="text" class="search-box" id="search" placeholder="Gõ thử tiếng Anh: study, learn, develop, plan hoặc tiếng Trung..." oninput="handleSuggest()">
+        <input type="text" class="search-box" id="search" placeholder="Gõ thử từ bất kỳ: study, learn, develop, plan, 發展, xuéxí..." oninput="handleSuggest()">
         <div id="suggest" class="suggestion-box"></div>
     </div>
 
     <div id="result">
         <div style="text-align: center; color: #999; padding: 60px;">
-            <h2>Hệ thống đã sẵn sàng! Hãy thử nhập "study" hoặc "發展" vào thanh tìm kiếm.</h2>
+            <h2>Hệ thống tìm kiếm thông minh đã kích hoạt! Hãy thử gõ một trong các từ khóa tiếng Anh phía trên.</h2>
         </div>
     </div>
 </div>
@@ -288,14 +288,15 @@
 <script>
 let totalScore = 0;
 
-// Dữ liệu từ điển gốc có tích hợp từ khóa tiếng Anh mở rộng phục vụ tra cứu ngược
+// CẤU TRÚC DỮ LIỆU ĐÃ ĐƯỢC FIX LỖI TÌM KIẾM NGƯỢC TIẾNG ANH
 const dictionary = {
   "學習": {
     pinyin: "xué xí",
     zhuyin: "ㄒㄩㄝˊ ㄒㄧˊ",
     ipa: "[ɕɥɛ˧˥ ɕi˧˥]",
     englishIpa: "/ˈstʌdi/ & /ˈlɜːrn/",
-    searchKeywords: ["study", "learn", "studying", "learning"], // Từ khóa tìm kiếm tiếng Anh bổ sung
+    // Khắc phục ở đây: Định nghĩa danh sách các từ khoá tiếng Anh khớp trực tiếp
+    englishKeywords: ["study", "learn", "studying", "learning"], 
     image: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600",
     wordFamily: ["Student (學生)", "School (學校)", "Scholar (學者)", "Academic (學術)"],
     videoUrl: "https://www.youtube.com/embed/SuMKdrdUsCw",
@@ -320,7 +321,8 @@ const dictionary = {
     zhuyin: "ㄈㄚ ㄓㄢˇ",
     ipa: "[fa˥ ʈʂan˨˩˦]",
     englishIpa: "/dɪˈveləp/ & /ɡrəʊθ/",
-    searchKeywords: ["develop", "growth", "development", "growing"], // Từ khóa tìm kiếm tiếng Anh bổ sung
+    // Khắc phục ở đây: Định nghĩa danh sách các từ khoá tiếng Anh khớp trực tiếp
+    englishKeywords: ["develop", "growth", "development", "growing"],
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600",
     wordFamily: ["Development (發展)", "Developer (開發者)", "Developing (發展中的)", "Developed (發達 de)", "Developed (發達的)"],
     videoUrl: "https://www.youtube.com/embed/ugqig8yDfbc",
@@ -345,7 +347,8 @@ const dictionary = {
     zhuyin: "ㄉㄚˇ ㄙㄨㄢˋ",
     ipa: "[ta˨˩˦ swan˥˩]",
     englishIpa: "/ˈplæn/ & /ɪnˈtend/",
-    searchKeywords: ["plan", "intend", "planning", "intention"], // Từ khóa tìm kiếm tiếng Anh bổ sung
+    // Khắc phục ở đây: Định nghĩa danh sách các từ khoá tiếng Anh khớp trực tiếp
+    englishKeywords: ["plan", "intend", "planning", "intention"],
     image: "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=600",
     wordFamily: ["Plan (計劃)", "Intent (意圖)", "Calculation (計算)", "Intentionally (故意地)"],
     videoUrl: "https://www.youtube.com/embed/UnSJWs6bkM8",
@@ -374,7 +377,7 @@ function speak(text, lang) {
     window.speechSynthesis.speak(msg);
 }
 
-// HÀM TÌM KIẾM ĐÃ ĐƯỢC TỐI ƯU TOÀN DIỆN CHO CẢ TIẾNG ANH VÀ TIẾNG TRUNG
+// KHẮC PHỤC THUẬT TOÁN: Duyệt mảng thông minh song ngữ toàn diện
 function handleSuggest() {
     let input = document.getElementById("search").value.trim().toLowerCase();
     let suggestBox = document.getElementById("suggest");
@@ -384,14 +387,17 @@ function handleSuggest() {
     Object.keys(dictionary).forEach(key => {
         let data = dictionary[key];
         
-        // Kiểm tra khớp chữ Hán gốc
+        // 1. Kiểm tra khớp ký tự Trung Quốc
         let matchChinese = key.includes(input);
-        // Kiểm tra khớp Pinyin (xoá dấu cách để gõ liền "xuexi" vẫn ra)
+        
+        // 2. Kiểm tra khớp Pinyin (xoá khoảng cách để tiện lợi hơn khi gõ nhanh)
         let matchPinyin = data.pinyin.replace(/\s+/g, '').includes(input) || data.pinyin.toLowerCase().includes(input);
-        // Kiểm tra khớp danh sách từ khoá tiếng Anh mở rộng (study, learn, develop, plan...)
-        let matchKeywords = data.searchKeywords.some(keyword => keyword.includes(input));
+        
+        // 3. Kiểm tra khớp các từ khoá tiếng Anh cốt lõi được liệt kê trong thuộc tính englishKeywords
+        let matchEnglishKeywords = data.englishKeywords.some(kw => kw.includes(input));
 
-        if (matchChinese || matchPinyin || matchKeywords) {
+        // Nếu thoả mãn 1 trong 3 điều kiện, đưa vào danh sách gợi ý
+        if (matchChinese || matchPinyin || matchEnglishKeywords) {
             let div = document.createElement("div");
             div.className = "suggestion-item";
             div.innerHTML = `<span><b>${key}</b> (${data.pinyin})</span> <span style="color: var(--english-blue); font-size:14px; font-weight:bold;">${data.pos.v.en}</span>`;
